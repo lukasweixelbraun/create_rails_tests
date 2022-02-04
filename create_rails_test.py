@@ -5,7 +5,7 @@ from os import listdir, system
 from os.path import isdir, isfile, join
 
 PATH_TO_RAILS_APP="/home/user/programming/my_app"
-PATH_TO_TEMP_RAILS_APP="/home/user/programming/tmp_app"
+PATH_TO_TEMP_RAILS_APP="/home/user/programming/temp_app"
 
 DRY_RUN=True
 
@@ -172,13 +172,26 @@ def read_file(file_path):
   file = open(file_path, 'r')
   return file.readlines()
 
+def setup_tmp_app():
+  print("Temp App Setup... ")
+  system("rm -r %s" % PATH_TO_TEMP_RAILS_APP)
+  system("gem install rails")
+  system("rails new temp_app %s" % PATH_TO_TEMP_RAILS_APP)
+
+def remove_tmp_app():
+  system("rm -r %s" % PATH_TO_TEMP_RAILS_APP)
+
 def main():
   for model in get_models():
     read_model(model)
   
   for controller in get_controllers():
     read_controller(controller)
-
   
 db_schema = read_db_schema()
-main()
+
+try:
+  setup_tmp_app()
+  main()
+except:
+  remove_tmp_app()
