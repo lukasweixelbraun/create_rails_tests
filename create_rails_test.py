@@ -110,6 +110,7 @@ def get_controllers():
 def read_controller(file_path):
   controller_name = get_controller_name(file_path)
   actions = get_controller_actions(file_path)
+  file_name = basename(file_path)
 
   if len(controller_name) == 0:
     print("Controller name is empty -- skipping file %s" % file_path)
@@ -119,7 +120,7 @@ def read_controller(file_path):
     print("Controller actions are empty -- skipping file %s" % file_path)
     return
 
-  create_controller(controller_name, actions)
+  create_controller(file_name, controller_name, actions)
 
 def get_controller_name(file_path):
   regex = 'class\\s+(\\w+::)*(\\w+)\\s*<\\s*.+Controller'
@@ -129,12 +130,13 @@ def get_controller_name(file_path):
       controller_search = re.search(regex, line.strip(), re.IGNORECASE)
 
       if controller_search:
-        return controller_search.group(2).strip()
+        name = controller_search.group(2).strip()
+        return  name.replace("Controller", "")
 
   return ""
 
 def get_controller_actions(file_path):
-  actions = ""
+  actions = []
   for line in read_file(file_path):
     if line.strip().startswith("def "):
       regex = '^\\s*def\\s+([^\\(]+)+(\\(.+\\))*$'
@@ -142,15 +144,36 @@ def get_controller_actions(file_path):
 
       if actions_search:
         action = actions_search.group(1)
-        actions = actions + " " + action.strip()
+        actions.append(action.strip())
   
   return actions
 
-def create_controller(name, actions):
+def create_controller(file_name, name, actions):
   if DRY_RUN == True:
-    print("cd %s && rails g controller %s %s --skip-collision-check --skip-routes --skip-template-engine --skip-helper --skip" % (PATH_TO_TEMP_RAILS_APP, name, actions))
+    print("cd %s && rails g controller %s --skip-collision-check --skip-routes --skip-template-engine --skip-helper --skip" % (PATH_TO_TEMP_RAILS_APP, name))
   else:
-    system("cd %s && rails g controller %s %s --skip-collision-check --skip-routes --skip-template-engine --skip-helper --skip" % (PATH_TO_TEMP_RAILS_APP, name, actions))
+    system("cd %s && rails g controller %s --skip-collision-check --skip-routes --skip-template-engine --skip-helper --skip" % (PATH_TO_TEMP_RAILS_APP, name))
+    populate_controller(file_name, actions)
+
+def populate_controller(file_name, actions):
+  name = file_name.replace("_controller.rb", "")
+  file_path = PATH_TO_TEMP_RAILS_APP + "/test/controllers/" + name + "_controller_test.rb"
+  lines = read_file(file_path)
+  f = open(file_path, "w")
+
+  for line in lines:
+    if line.strip() == "end":
+      f.write('\n')
+      f.write('  setup do\n')
+      f.write('    @%s = %s(:one)\n' % (name, name))
+      f.write('  end\n\n')
+      for action in actions:
+        f.write('  test "%s" do\n' % action.replace("_", " "))
+        f.write('    assert true\n')
+        f.write('  end\n\n')
+    f.write(line)
+  f.close()
+  
 
 # ------------------------------------ Helpers ------------------------------------
 
@@ -193,5 +216,7 @@ db_schema = read_db_schema()
 try:
   setup_tmp_app()
   main()
-except:
+except Exception as e:
+  print(e)
+  print("Error! Cleaning up Project... ")
   remove_tmp_app()
