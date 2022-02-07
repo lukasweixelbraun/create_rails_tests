@@ -15,7 +15,6 @@ DATABASE_SCHEMA = [
   "schema2",
   "schema3"
 ]
-
 # ------------------------------------ Models ------------------------------------
 
 def get_models():
@@ -56,10 +55,16 @@ def get_table_variables(table_name):
   table_line_found = False
 
   for line in db_schema:
-    if ("create_table" in line) and (table_name in line):
-      table_line_found = True
-      continue
-    elif (line.strip() == "end") and (table_line_found == True):
+    if table_line_found == False:
+      create_regex = "\\s*create_table\\s+[\"|'](\\w+)[\"|'].*"
+      create_table_search = re.search(create_regex, line.strip(), re.IGNORECASE)
+
+      if create_table_search:
+        if table_name == create_table_search.group(1):
+          table_line_found = True
+          continue
+    
+    elif line.strip() == "end":
       table_line_found = False
       break
 
@@ -123,6 +128,7 @@ def populate_model(file_name, actions):
       f.write('  end\n\n')
       for action in actions:
         f.write('  test "%s" do\n' % action.replace("_", " ").replace("self.", ""))
+        f.write('    # TODO: test %s\n' % action)
         f.write('    assert true\n')
         f.write('  end\n\n')
     f.write(line)
