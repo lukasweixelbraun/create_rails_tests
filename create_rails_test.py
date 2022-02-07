@@ -15,6 +15,7 @@ DATABASE_SCHEMA = [
   "schema2",
   "schema3"
 ]
+
 # ------------------------------------ Models ------------------------------------
 
 def get_models():
@@ -194,6 +195,7 @@ def populate_controller(file_name, actions):
       f.write('  end\n\n')
       for action in actions:
         f.write('  test "%s" do\n' % action.replace("_", " ").replace("self.", ""))
+        f.write('    # TODO: test %s\n' % action)
         f.write('    assert true\n')
         f.write('  end\n\n')
     f.write(line)
